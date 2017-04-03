@@ -9,13 +9,18 @@
             tk.companyHost = localStorage.getItem("tk_host");
         },
 
-        coreHost: 'http://tkiller.app',
+        sandboxHost: 'http://sandbox.taskkiller.com.ar',
+        coreHost: 'http://taskkiller.com.ar',
         companyHost: '',
 
         emptyCallback: function(response){console.log(response)},
 
         authorize: function(data) {
-            http.perform('POST', tk.coreHost + '/api/authorize', data, function(response) {
+            var dataToSend = {
+                company: data.company,
+                appKey: data.appKey
+            };
+            http.perform('POST', tk.coreHost + '/api/authorize', dataToSend, function(response) {
                 data.error || ( data.error = tk.emptyCallback );
                 data.success || ( data.success = tk.emptyCallback );
                 if( response.error || (response.tk_token == void 0 && !response.status) ) {
@@ -27,6 +32,7 @@
                     if(response.tk_token) {
                         localStorage.setItem("tk_token", response.tk_token);
                         localStorage.setItem("tk_host", response.tk_host);
+                        tk.loadLsto();
                     }
 
                     data.success(response);
