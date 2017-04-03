@@ -4,9 +4,23 @@
 
         token: null,
 
+        emptyCallback: function(response){console.log(response)},
+
         authorize: function(data) {
-            this.perform('GET', 'http://taskkiller.com.ar/authorize', data, function(token) {
-                localStorage.setItem("task_token", token);
+            this.perform('POST', 'http://taskkiller.com.ar/api/authorize', data, function(response) {
+                data.error || ( data.error = tk.emptyCallback );
+                data.success || ( data.success = tk.emptyCallback );
+
+                if( response.error || response.token == void 0 ) {
+
+                    data.error(response);
+
+                } else {
+
+                    localStorage.setItem("tk_token", response.token);
+                    data.success(response.token);
+
+                }
             });
         },
 
