@@ -4,21 +4,32 @@
 
         token: null,
 
+        loadLsto: function() {
+            tk.token = localStorage.getItem("tk_token");
+            tk.companyHost = localStorage.getItem("tk_host");
+        },
+
+        coreHost: 'http://tkiller.app',
+        companyHost: '',
+
         emptyCallback: function(response){console.log(response)},
 
         authorize: function(data) {
-            this.perform('POST', 'http://taskkiller.com.ar/api/authorize', data, function(response) {
+            http.perform('POST', tk.coreHost + '/api/authorize', data, function(response) {
                 data.error || ( data.error = tk.emptyCallback );
                 data.success || ( data.success = tk.emptyCallback );
-
-                if( response.error || response.token == void 0 ) {
+                if( response.error || (response.tk_token == void 0 && !response.status) ) {
 
                     data.error(response);
 
                 } else {
 
-                    localStorage.setItem("tk_token", response.token);
-                    data.success(response.token);
+                    if(response.tk_token) {
+                        localStorage.setItem("tk_token", response.tk_token);
+                        localStorage.setItem("tk_host", response.tk_host);
+                    }
+
+                    data.success(response);
 
                 }
             });
@@ -141,8 +152,9 @@
                 type: method, url: url, dataType: 'json',
                 data: data, headers: headers, success: success, error: error
             });*/
-            if(url.indexOf("http") == -1) {
-                url = "/api" + url;
+            var isAuthorize = url.indexOf("authorize") != -1;
+            if(!isAuthorize) {
+                url = tk.companyHost + "/api" + url;
             }
 
 
@@ -166,7 +178,7 @@
 
             /* XHR BUILD */
             var xhr = new XMLHttpRequest();
-            xhr.open(method, url, true);
+            xhr.open(method, url, !isAuthorize);
 
             if(!("Content-Type" in headers)) {
                 xhr.setRequestHeader('Accept', 'application/json');
@@ -386,5 +398,8 @@
     MemberResource.prototype.find = function(memberId, callback) {
         filter.call(this, null, callback, '/users/'+memberId, Member);
     };
+
+
+tk.loadLsto()
 
 })(window);
