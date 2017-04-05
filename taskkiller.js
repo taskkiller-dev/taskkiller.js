@@ -5,11 +5,10 @@
         token: null,
 
         loadLsto: function() {
-            tk.token = localStorage.getItem("tk_token");
-            tk.companyHost = localStorage.getItem("tk_host");
+            tk.token = localStorage.getItem("tk-token");
+            tk.companyHost = localStorage.getItem("tk-host");
         },
 
-        sandboxHost: 'http://sandbox.taskkiller.com.ar',
         coreHost: 'http://taskkiller.com.ar',
         companyHost: '',
 
@@ -29,9 +28,10 @@
 
                 } else {
 
+                    tk.currentCompany = data.company;
                     if(response.tk_token) {
-                        localStorage.setItem("tk_token", response.tk_token);
-                        localStorage.setItem("tk_host", response.tk_host);
+                        localStorage.setItem("tk-token", response.tk_token);
+                        localStorage.setItem("tk-host", response.tk_host);
                         tk.loadLsto();
                     }
 
@@ -406,6 +406,6 @@
     };
 
 
-tk.loadLsto()
+tk.loadLsto();
 
 })(window);
