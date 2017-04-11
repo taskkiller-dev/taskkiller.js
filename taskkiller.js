@@ -9,37 +9,26 @@
             tk.companyHost = localStorage.getItem("tk-host");
         },
 
-        coreHost: 'http://taskkiller.com.ar',
+        coreDomain: 'taskkiller.com.ar',
+        company: '',
         companyHost: '',
 
-        emptyCallback: function(response){console.log(response)},
-
-        authorize: function(data) {
-            var dataToSend = {
-                company: data.company,
-                appKey: data.appKey
-            };
-            http.perform('POST', tk.coreHost + '/api/authorize', dataToSend, function(response) {
-                data.error || ( data.error = tk.emptyCallback );
-                data.success || ( data.success = tk.emptyCallback );
-                if( response.error || (response.tk_token == void 0 && !response.status) ) {
-
-                    data.error(response);
-
-                } else {
-
-                    tk.currentCompany = data.company;
-                    if(response.tk_token) {
-                        localStorage.setItem("tk-token", response.tk_token);
-                        localStorage.setItem("tk-host", response.tk_host);
-                        tk.loadLsto();
-                    }
-
-                    data.success(response);
-
-                }
-            });
+        setCompany: function(company) {
+            tk.company = company;
+            tk.setCompanyHost( "//"+company+"."+tk.coreDomain );
         },
+
+        setCompanyHost: function(host) {
+            localStorage.setItem("tk-host", host);
+            tk.companyHost = host;
+        },
+
+        setToken: function(token) {
+            localStorage.setItem("tk-token", token);
+            tk.token = token;
+        },
+
+        emptyCallback: function(response){console.log(response)},
 
         resource: function(resource) {
             var res;
@@ -87,16 +76,32 @@
     CommentResource = function() {},
     AttachmentResource = function() {},
     MemberResource = function() {},
-    generalSuccess = function(completed, resourceConstructor, data) {
+    generalSuccessFirst = function(completed, resourceConstructor, data) {
+        generalSuccess.call(this, completed, resourceConstructor, data, true);
+    },
+    generalSuccess = function(completed, resourceConstructor, data, firstOnly) {
+        /*if(typeof firstOnly == "object") {
+            data = firstOnly;
+            firstOnly = false;
+        }*/
         if(typeof completed == "function") {
             if(data.error) {
                 completed(data.error);
             } else {
-                var result = [];
-                if(data.length) {
-                    data.forEach(function(resourceJson) {
-                        result.push(new resourceConstructor(resourceJson));
-                    });
+                var result;
+                if(data.length != void 0) {
+                    if(!data.length) {
+                        result = [];
+                    } else {
+                        if(firstOnly) {
+                            result = new resourceConstructor(data[0]);
+                        } else {
+                            result = [];
+                            data.forEach(function(resourceJson) {
+                                result.push(new resourceConstructor(resourceJson));
+                            });
+                        }
+                    }
                 } else {
                     result = new resourceConstructor(data);
                 }
@@ -158,10 +163,8 @@
                 type: method, url: url, dataType: 'json',
                 data: data, headers: headers, success: success, error: error
             });*/
-            var isAuthorize = url.indexOf("authorize") != -1;
-            if(!isAuthorize) {
-                url = tk.companyHost + "/api" + url;
-            }
+            
+            url = tk.companyHost + "/api" + url;
 
 
             /* GET FIX */
@@ -247,8 +250,13 @@
         },
     },
 
-    filter = function(filters, callback, url, resourceConstructor) {
-        http.get(url, filters, generalSuccess.bind(this, callback, resourceConstructor), generalError.bind(this, callback));
+    filterOne = function(filters, callback, url, resourceConstructor) {
+        filter.call(this, filters, callback, url, resourceConstructor, true);
+    },
+
+    filter = function(filters, callback, url, resourceConstructor, firstOnly) {
+        var successFunc = firstOnly ? generalSuccessFirst : generalSuccess;
+        http.get(url, filters, successFunc.bind(this, callback, resourceConstructor), generalError.bind(this, callback));
     };
 
 
@@ -264,6 +272,10 @@
         var url = [ '/projects', projectId, 'members' ].join('/');
         http.get(url, {}, simpleJSONSuccess.bind(this, callback), generalError.bind(this, callback));
     };
+
+    ProjectResource.prototype.filter = function(filters, callback) {
+        filter.call(this, filters, callback, '/projects', Project);
+    }
 
 
     ReleaseResource.prototype.filter = function(filters, callback) {
@@ -321,10 +333,24 @@
         http.post(url, {'user_id':memberId}, generalSuccess.bind(this, callback, Member), generalError.bind(this, callback));
     };
 
+    Project.prototype.getBacklog = function(callback) {
+        var url = [ '/projects', this.id, 'releases' ].join('/');
+        var data = {
+            release_type: 'backlog',
+            limit: 1
+        }
+        http.get(url, data, generalSuccessFirst.bind(this, callback, Release), generalError.bind(this, callback));
+    };
+
 
     Release.prototype.createColumn = function(data, callback) {
         var url = [ '/releases', this.id, 'columns' ].join('/');
         http.post(url, data, generalSuccess.bind(this, callback, Column), generalError.bind(this, callback));
+    };
+
+    Release.prototype.getColumns = function(data, callback) {
+        var url = [ '/releases', this.id, 'columns' ].join('/');
+        filter.call(this, data, callback, url, Column);
     };
 
 
