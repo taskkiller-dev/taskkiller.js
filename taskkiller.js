@@ -198,7 +198,7 @@
 
             /* XHR BUILD */
             var xhr = new XMLHttpRequest();
-            xhr.open(method, url, !isAuthorize);
+            xhr.open(method, url, true);
 
             if(!("Content-Type" in headers)) {
                 xhr.setRequestHeader('Accept', 'application/json');
