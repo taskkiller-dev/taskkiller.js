@@ -13,6 +13,17 @@
         company: '',
         companyHost: '',
 
+        generateOAuthLink: function(data) {
+            var link = tk.companyHost,
+                key;
+            link += "/oauth/authorize?";
+            link += Object.keys(data).map(function(k) {
+                return encodeURIComponent(k) + '=' + encodeURIComponent(data[k]);
+            }).join('&');
+
+            return link;
+        },
+
         setCompany: function(company) {
             tk.company = company;
             tk.setCompanyHost( "//"+company+"."+tk.coreDomain );
