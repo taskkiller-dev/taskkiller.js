@@ -64,8 +64,8 @@
                     res = new AttachmentResource();
                     break;
 
-                case 'member':
-                    res = new MemberResource();
+                case 'user':
+                    res = new UserResource();
                     break;
 
                 default:
@@ -80,13 +80,55 @@
 
     },
 
+    diffForHumans = function (diff) {
+        var years,
+            days,
+            months,
+            hours,
+            days,
+            minutes,
+            seconds;
+        console.log(diff);
+        var years = diff / 1000 / 60 / 60 / 24 / 365;
+        if(years > 1) {
+            return Math.floor(years) + " " + pluralize("year", "years", years) + " ago";
+        } else {
+            var days = years * 365;
+            if(days > 1) {
+                if(days < 31) {
+                    return Math.floor(days) + " " + pluralize("day", "days", days) + " ago";
+                } else {
+                    months = days / 31;
+                    return Math.floor(months) + " " + pluralize("month", "months", months) + " ago";
+                }
+            } else {
+                hours = days * 24;
+                if(hours > 1) {
+                    return Math.floor(hours) + " " + pluralize("hour", "hours", hours) + " ago";
+                } else {
+                    minutes = hours * 60;
+                    if(minutes > 1) {
+                        return Math.floor(minutes) + " " + pluralize("minute", "minutes", minutes) + " ago";
+                    } else {
+                        seconds = minutes * 60;
+                        return Math.floor(seconds) + " " + pluralize("second", "seconds", seconds) + " ago";
+                    }
+                }
+            }
+        }
+
+    },
+    pluralize = function(singular, plural, value) {
+        return (Math.floor(value) == 1) ? singular: plural;
+    },
+
     ProjectResource = function() {},
     ReleaseResource = function() {},
     ColumnResource = function() {},
     IssueResource = function() {},
     CommentResource = function() {},
     AttachmentResource = function() {},
-    MemberResource = function() {},
+    UserResource = function() {},
     generalSuccessFirst = function(completed, resourceConstructor, data) {
         generalSuccess.call(this, completed, resourceConstructor, data, true);
     },
@@ -152,7 +194,7 @@
     Comment = function(attrs) {
         extend(this, attrs);
     },
-    Member = function(attrs) {
+    User = function(attrs) {
         extend(this, attrs);
     }
 
@@ -161,6 +203,25 @@
     },
 
     http = {
+        parseGetData: function(srcjson, parent) {
+            var u = encodeURIComponent,
+                urljson = [],
+                keys = Object.keys(srcjson),
+                len = keys.length;
+
+            for(var i=0; i < len; i++){
+              var k = parent ? parent + "[" + keys[i] + "]" : keys[i];
+
+              if(typeof srcjson[keys[i]] !== "object"){
+                urljson.push( u(k) + "=" + u(srcjson[keys[i]]) );
+              } else {
+                urljson.push( http.parseGetData(srcjson[keys[i]], k) );
+              }
+            }
+
+            return urljson.join("&");
+
+        },
         dataBody: 'POST|PUT|DELETE',
         perform: function(method, url, data, headers, success, error) {
             method = method.toUpperCase();
@@ -180,20 +241,7 @@
 
             /* GET FIX */
             if(data && method=="GET" && Object.keys(data).length) {
-                var new_data = [],
-                    key, value,
-                    valueLen;
-                for(key in data) {
-                    value = data[key];
-                    valueLen = value.length
-                    if(typeof value == "object" && valueLen) {
-                        var ek = encodeURIComponent(key)+'[]';
-                        for (var i = 0; i < valueLen; i++) new_data.push( ek+'='+encodeURIComponent(value[i]) );
-                    } else {
-                        new_data.push( encodeURIComponent(key)+'='+encodeURIComponent(value) );
-                    }
-                };
-                url += '?'+new_data.join('&');
+                url += '?' + http.parseGetData(data);
             }
 
             /* XHR BUILD */
@@ -207,7 +255,7 @@
 
             /* HEADERS SETUP */
             if(tk.token) {
-                headers['Authorization'] = "Bearer: " + tk.token; 
+                headers['Authorization'] = "Bearer " + tk.token; 
             }
             var header;
             for(header in tk.xhrSetup.headers) {
@@ -279,8 +327,8 @@
         return new Project(data);
     };
 
-    ProjectResource.prototype.members = function(projectId, callback) {
-        var url = [ '/projects', projectId, 'members' ].join('/');
+    ProjectResource.prototype.users = function(projectId, callback) {
+        var url = [ '/projects', projectId, 'users' ].join('/');
         http.get(url, {}, simpleJSONSuccess.bind(this, callback), generalError.bind(this, callback));
     };
 
@@ -294,7 +342,7 @@
     };
 
     ReleaseResource.prototype.find = function(releaseId, callback) {
-        filter.call(this, null, callback, '/releases/'+releaseId, Release);
+        filterOne.call(this, null, callback, '/releases/'+releaseId, Release);
     };
 
     ReleaseResource.prototype.create = function(data, callback) {
@@ -316,7 +364,7 @@
     };
 
     ColumnResource.prototype.find = function(columnId, callback) {
-        filter.call(this, null, callback, '/columns/'+columnId, Column);
+        filterOne.call(this, null, callback, '/columns/'+columnId, Column);
     };
 
 
@@ -325,7 +373,7 @@
     };
 
     IssueResource.prototype.find = function(issueId, callback) {
-        filter.call(this, null, callback, '/issues/'+issueId, Issue);
+        filterOne.call(this, null, callback, '/issues/'+issueId, Issue);
     };
 
     IssueResource.prototype.create = function(data, callback) {
@@ -339,9 +387,9 @@
     };
 
 
-    Project.prototype.addMember = function(memberId, callback) {
-        var url = [ '/projects', this.id, 'members' ].join('/');
-        http.post(url, {'user_id':memberId}, generalSuccess.bind(this, callback, Member), generalError.bind(this, callback));
+    Project.prototype.addUser = function(userId, callback) {
+        var url = [ '/projects', this.id, 'users' ].join('/');
+        http.post(url, {'user_id':userId}, generalSuccess.bind(this, callback, User), generalError.bind(this, callback));
     };
 
     Project.prototype.getBacklog = function(callback) {
@@ -428,19 +476,30 @@
 
     };
 
-    Issue.prototype.addMember = function(memberId, callback) {
-        var url = [ '/issues', this.id, 'members' ].join('/');
-        http.post(url, memberId, generalSuccess.bind(this, callback, Member), generalError.bind(this, callback));
+    Issue.prototype.addUser = function(userId, callback) {
+        var url = [ '/issues', this.id, 'users' ].join('/');
+        http.post(url, userId, generalSuccess.bind(this, callback, User), generalError.bind(this, callback));
     };
 
-    Issue.prototype.deleteMember = function(memberId, callback) {
-        var url = [ '/issues', this.id, 'members' ].join('/');
-        http.delete(url, memberId, generalSuccess.bind(this, callback, Issue), generalError.bind(this, callback));
+    Issue.prototype.deleteUser = function(userId, callback) {
+        var url = [ '/issues', this.id, 'users' ].join('/');
+        http.delete(url, userId, generalSuccess.bind(this, callback, Issue), generalError.bind(this, callback));
     };
 
-    MemberResource.prototype.find = function(memberId, callback) {
-        filter.call(this, null, callback, '/users/'+memberId, Member);
+    Issue.prototype.prettyDate = function(date) {
+        var now = new Date()
+            diff = now - new Date(this[date]);
+            
+        return diffForHumans(diff);
+    }
+
+    UserResource.prototype.find = function(userId, callback) {
+        filterOne.call(this, null, callback, '/users/'+userId, User);
     };
+
+    UserResource.prototype.filter = function(filters, callback) {
+        filter.call(this, filters, callback, '/users', User);
+    }
 
 
 tk.loadLsto();
