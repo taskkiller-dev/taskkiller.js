@@ -88,7 +88,7 @@
             days,
             minutes,
             seconds;
-        console.log(diff);
+
         var years = diff / 1000 / 60 / 60 / 24 / 365;
         if(years > 1) {
             return Math.floor(years) + " " + pluralize("year", "years", years) + " ago";
@@ -327,9 +327,9 @@
         return new Project(data);
     };
 
-    ProjectResource.prototype.users = function(projectId, callback) {
+    ProjectResource.prototype.users = function(projectId, data, callback) {
         var url = [ '/projects', projectId, 'users' ].join('/');
-        http.get(url, {}, simpleJSONSuccess.bind(this, callback), generalError.bind(this, callback));
+        http.get(url, data, simpleJSONSuccess.bind(this, callback), generalError.bind(this, callback));
     };
 
     ProjectResource.prototype.filter = function(filters, callback) {
@@ -419,6 +419,11 @@
     };
 
 
+    Issue.prototype.getUsers = function(data, callback) {
+        var url = ['/issues', this.id, 'users'].join('/');
+        filter.call(this, data, callback, url, User);
+    };
+
     Issue.prototype.moveTo = function(data, callback) {
         var url = [ '/issues', this.id, 'move' ].join('/');
         http.put(url, data, generalSuccess.bind(this, callback, Issue), generalError.bind(this, callback));
@@ -435,6 +440,16 @@
     Issue.prototype.postComment = function(commentText, callback) {
         var url = [ '/issues', this.id, 'comments' ].join('/');
         http.post(url, {text: commentText}, generalSuccess.bind(this, callback, Comment), generalError.bind(this, callback));
+    };
+
+    Issue.prototype.postPriority = function(priority, callback) {
+      var url = [ '/issues', this.id, 'priority' ].join('/');
+        http.post(url, {priority: priority}, generalSuccess.bind(this, callback, Issue), generalError.bind(this, callback));  
+    };
+
+    Issue.prototype.postType = function(type, callback) {
+      var url = [ '/issues', this.id, 'type' ].join('/');
+        http.post(url, {type: type}, generalSuccess.bind(this, callback, Issue), generalError.bind(this, callback));  
     };
 
     Issue.prototype.attach = function(file, callback) {
